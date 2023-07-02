@@ -4,8 +4,8 @@ import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,7 +28,15 @@ import com.example.basicscodelab.ui.theme.BasicsCodelabTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.items // A DIFFERENT IMPORT WOULD BE USED BY DEFAULT
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 
 class MainActivity : ComponentActivity() {
@@ -53,7 +60,7 @@ fun MyApp(modifier: Modifier = Modifier) {
     var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 
     Surface(modifier) {
-        if(shouldShowOnboarding) {
+        if (shouldShowOnboarding) {
             /* The callback "onContinueClicked" is a callback (function that is passed as an
                 argument into another function to get executed when that event occurs */
             OnboardingScreen(onContinueClicked = { shouldShowOnboarding = false })
@@ -94,8 +101,8 @@ private fun Greetings(
     /* LazyColumn API provides an items element to (I think) get the items that will actually be
         displayed on the screen */
     LazyColumn(modifier = modifier.padding(vertical = 4.dp)) {
-        items(items = names) {
-            name -> Greeting(name = name)
+        items(items = names) { name ->
+            Greeting(name = name)
         }
     }
 }
@@ -103,53 +110,67 @@ private fun Greetings(
 // "@Composable" enables a function to call other "@Composable" functions within it
 @Composable
 fun Greeting(name: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        CardContent(name)
+    }
+}
+
+@Composable
+fun CardContent(name: String) {
     // State/MutableState interfaces hold a value and trigger UI updates when that value changes
     /* To preserve the state across recompositions (in this case, of the Greeting composable),
         use "remember" */
     // Each Greeting composable has its own version of the expanded state, like a private variable
     var expanded by remember { mutableStateOf(false) }
-    /* extraPadding is calculated each time a Greeting is recomposed, so it doesn't need to be
-        remembered */
-    // animateDpAsState causes the animated expansion of the composables
-    // Optional animationSpec parameter gives the animation its springiness - note .coerceAtLeast(0.dp)
-    val extraPadding by animateDpAsState(
-        if(expanded) 48.dp else 0.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        )
-    )
-    //Components nested in Surface will be drawn on top of Surface, which gives the background color
-    Surface(
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+    Row(
+        modifier = Modifier
+            .padding(12.dp)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
     ) {
-        Row(modifier = Modifier.padding(24.dp)) {
-            Column(
-                /* Optional modifier parameters "tell a UI element how to lay out, display,
-                    or behave within the parent layout */
-                /* ".fillMaxWidth()" is redundant since weight() causes the Column to grow
-                    as large as it can, pushing the Elevated button to the right */
-                modifier = Modifier
-                    .weight(1f)
-                    /* .coerceAtLeast ensures padding is never negative, since that would crash
-                        the app */
-                    .padding(bottom = extraPadding.coerceAtLeast(0.dp))
-            ) {
-                Text("Hello,")
+        Column(
+            /* Optional modifier parameters "tell a UI element how to lay out, display,
+                or behave within the parent layout */
+            /* ".fillMaxWidth()" is redundant since weight() causes the Column to grow
+                as large as it can, pushing the Elevated button to the right */
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("Hello,")
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold
+                )
+            )
+            if (expanded) {
                 Text(
-                    text = name,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold
-                ))
-            }
-            ElevatedButton(
-                onClick = { expanded = !expanded }
-            ) {
-                Text(if(expanded) "Show less" else "Show more")
+                    "Lorem ipsum dolor sit amet. Ea laudantium saepe sed esse voluptas" +
+                            "eos sapiente quia. Sed necessitatibus commodi et adipisci ullam" +
+                            "non placeat expedita est laudantium reiciendis."
+                )
             }
         }
+        IconButton(onClick = { expanded = !expanded }) {
+            Icon(
+                imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = if (expanded) {
+                    stringResource(R.string.show_less)
+                } else {
+                    stringResource(R.string.show_more)
+                }
+            )
+        }
     }
+
 }
 
 @Preview
