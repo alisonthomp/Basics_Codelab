@@ -1,13 +1,18 @@
 package com.example.basicscodelab
 
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.example.basicscodelab.ui.theme.BasicsCodelabTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.items // A DIFFERENT IMPORT WOULD BE USED BY DEFAULT
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.font.FontWeight
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +48,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(modifier: Modifier = Modifier) {
     // "by" removes the need from typing ".value" after "shouldShowOnboarding"
-    var shouldShowOnboarding by remember { mutableStateOf(true) }
+    /* As opposed to remember, rememberSaveable will save each state surviving configuration
+        changes (eg rotations) and process death */
+    var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 
     Surface(modifier) {
         if(shouldShowOnboarding) {
@@ -78,11 +88,14 @@ fun OnboardingScreen(
 @Composable
 private fun Greetings(
     modifier: Modifier = Modifier,
-    names: List<String> = listOf("World", "Compose")
+    // $it represents the List index, so names 0-whatever will be created
+    names: List<String> = List(1000) { "$it" }
 ) {
-    Column(modifier = modifier.padding(vertical = 4.dp)) {
-        for(name in names) {
-            Greeting(name = name)
+    /* LazyColumn API provides an items element to (I think) get the items that will actually be
+        displayed on the screen */
+    LazyColumn(modifier = modifier.padding(vertical = 4.dp)) {
+        items(items = names) {
+            name -> Greeting(name = name)
         }
     }
 }
@@ -94,10 +107,18 @@ fun Greeting(name: String) {
     /* To preserve the state across recompositions (in this case, of the Greeting composable),
         use "remember" */
     // Each Greeting composable has its own version of the expanded state, like a private variable
-    val expanded = remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
     /* extraPadding is calculated each time a Greeting is recomposed, so it doesn't need to be
         remembered */
-    val extraPadding = if(expanded.value) 48.dp else 0.dp
+    // animateDpAsState causes the animated expansion of the composables
+    // Optional animationSpec parameter gives the animation its springiness - note .coerceAtLeast(0.dp)
+    val extraPadding by animateDpAsState(
+        if(expanded) 48.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        )
+    )
     //Components nested in Surface will be drawn on top of Surface, which gives the background color
     Surface(
         color = MaterialTheme.colorScheme.primary,
@@ -111,15 +132,21 @@ fun Greeting(name: String) {
                     as large as it can, pushing the Elevated button to the right */
                 modifier = Modifier
                     .weight(1f)
-                    .padding(bottom = extraPadding)
+                    /* .coerceAtLeast ensures padding is never negative, since that would crash
+                        the app */
+                    .padding(bottom = extraPadding.coerceAtLeast(0.dp))
             ) {
                 Text("Hello,")
-                Text(name)
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold
+                ))
             }
             ElevatedButton(
-                onClick = { expanded.value = !expanded.value }
+                onClick = { expanded = !expanded }
             ) {
-                Text(if(expanded.value) "Show less" else "Show more")
+                Text(if(expanded) "Show less" else "Show more")
             }
         }
     }
@@ -148,5 +175,19 @@ fun GreetingsPreview() {
 fun OnboardingPreview() {
     BasicsCodelabTheme {
         OnboardingScreen(onContinueClicked = {}) // Nothing is done on click
+    }
+}
+
+@Preview(
+    showBackground = true,
+    widthDp = 320,
+    uiMode = UI_MODE_NIGHT_YES,
+    name = "Dark"
+)
+@Preview(showBackground = true, widthDp = 320)
+@Composable
+fun DefaultPreview() {
+    BasicsCodelabTheme {
+        Greetings()
     }
 }
